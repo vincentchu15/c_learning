@@ -3,6 +3,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+//On linux need below two
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #define IFCONFIG_CMD_PATH "/sbin/ifconfig"
 
