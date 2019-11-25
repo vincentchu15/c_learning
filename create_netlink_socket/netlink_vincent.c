@@ -49,15 +49,16 @@ int main() {
     iov.iov_len = sizeof(buf);
 
     //Step 5: Init netlink message header
-    struct nlmsghdr *nlh = (struct nlmsghdr*)buf;
+    struct nlmsghdr *nlh = (struct nlmsghdr*)buf; //nlh always points to buf
     nlh->nlmsg_pid = getpid();
     nlh->nlmsg_len = sizeof(buf);
-    nlh->nlmsg_type = 0;
+    nlh->nlmsg_type = 5566;
 
-    //Step 5: Copy our message string into payload part
+    //Step 6: Copy our message string into payload part
     strcpy(NLMSG_DATA(nlh), cli_msg);
 
-    //Step 6: Init protocol header
+    printf("[Before 1] Message to kernel is '%s' , message type is %d\n", (char*)NLMSG_DATA(nlh), nlh->nlmsg_type);
+    //Step 7: Init protocol header
     struct msghdr msg;
     memset(&msg, 0, sizeof(msg));
     msg.msg_name = &server_addr;
@@ -65,24 +66,33 @@ int main() {
     msg.msg_iov = &iov; //io vector (including our header & payload)
     msg.msg_iovlen = 1; //io size
 
-    //Step 7: Send message to kernel
+    //Step 8: Send message to kernel
     printf("Send message '%s' \n", (char*)NLMSG_DATA(nlh));
     ssize_t snd_status = sendmsg(sk, &msg, 0);
     if (snd_status < 0) {
         printf("Failed to send message to kernel. Error is %s", strerror(errno));
 	close(sk);
     }
+    printf("[Before 2] Message to kernel is '%s' \n", (char*)NLMSG_DATA(nlh));
 
-    //Step 8: Waiting for reponse messages from kernel
-    memset(nlh, 0, sizeof(msg));
+    //Step 9: Waiting for reponse messages from kernel    
+    //memset(nlh, 0, sizeof(nlh));
     ssize_t rcv_status = recvmsg(sk, &msg, 0);
+    printf("[Before 3] Message to kernel is '%s' \n", (char*)NLMSG_DATA(nlh));
+
+#if 1
+    //Try to extrace buff manually using another nlh
+    struct nlmsghdr *res_msg = (struct nlmsghdr*)buf;
+    printf("[After] Message from kernel is %s, type is %d\n", (char*)NLMSG_DATA(res_msg), res_msg->nlmsg_type); //type is not 24 as we define. 24 is protocol
+#endif
+
     if (rcv_status < 0) {
         printf("Failed to receive message from kernel. Error is %s", strerror(errno));
 	close(sk);
 	return -1;
     }
 
-    //Step 9: Check message name length
+    //Step 10: Check message name length
     if (msg.msg_namelen != sizeof(cli_addr)) {
         printf("Invalid length of the sender address struct\n");
         close(sk);
