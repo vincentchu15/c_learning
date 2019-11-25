@@ -39,7 +39,7 @@ static void send_msg_to_user(char *msg, int user_pid) {
 	printk("Send message: '%s' to user. \n", (char *)NLMSG_DATA(nlh));
 
 	//Send response message to user space
-        netlink_unicast(nl_sk, skb, user_pid, MSG_DONTWAIT);
+        netlink_unicast(nl_sk, skb, user_pid, MSG_DONTWAIT); //function would return when there is no data if last arg is 1 (otherwise sleep)
 }
 
 //Receive message from user space(a skb)
@@ -53,7 +53,7 @@ static void recv_user_msg(struct sk_buff *skb) {
 		return;
 	}
 
-	printk("Received messge: '%s' from user(pid:%d)\n", (char*)NLMSG_DATA(nlh), user_pid); //Extract payload in message
+	printk("Received messge: '%s' from user pid:%d, len=%d\n", (char*)NLMSG_DATA(nlh), user_pid, nlh->nlmsg_len); //Extract payload in message
 	
 	//Response to user
 	send_msg_to_user(msg_from_kernel, user_pid);
