@@ -79,8 +79,8 @@ int main() {
 	int my_pid = getpid();
 	int len = nl_hdr->nlmsg_len;
 	int type = nl_hdr->nlmsg_type;
-	printf("Got message from kernel. my_pid=%d, pid=%d, status=%ld, length=%d, sizeof(nl_hdr)=%ld\n",
-		       my_pid, pid, status, len, sizeof(*nl_hdr));
+	printf("Got message from kernel. my_pid=%d, pid=%d, status=%ld, length=%d, sizeof(nl_hdr)=%ld, type=%d\n",
+		       my_pid, pid, status, len, sizeof(*nl_hdr), type);
 
 	if (type == RTM_NEWROUTE) { //ip route add ...
 	    printf("Got route add. message is: %s\n", (char*)msg.msg_iov);

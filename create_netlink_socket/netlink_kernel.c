@@ -28,8 +28,8 @@ static void send_msg_to_user(char *msg, int user_pid) {
 		return;
 	}
 
-	//Init a netlink message
-	nlh = nlmsg_put(skb, 0, 0, 0, MAX_MSGSIZE, 0);
+	//Add a new netlink message into a skb (Construct header also, so return header address)
+	nlh = nlmsg_put(skb, 0, 0, 0, MAX_MSGSIZE, 0); //Second arg is kernel pid
 	NETLINK_CB(skb).portid = 0;
         NETLINK_CB(skb).dst_group = 0;
        
@@ -38,13 +38,13 @@ static void send_msg_to_user(char *msg, int user_pid) {
 	printk("Send message: '%s' to user. \n", (char *)NLMSG_DATA(nlh));
 
 	//Send response message to user space
-        netlink_unicast(nl_sk, skb, user_pid, MSG_DONTWAIT); //why not give nlh???
+        netlink_unicast(nl_sk, skb, user_pid, MSG_DONTWAIT);
 }
 
 //Receive message from user space(a skb)
 static void recv_user_msg(struct sk_buff *skb) {
 	struct nlmsghdr *nlh = NULL;
-	nlh = nlmsg_hdr(skb); //Get message header
+	nlh = nlmsg_hdr(skb); //Extract message header
 	user_pid = nlh->nlmsg_pid; //Extract user pid
 
 	//Check message length
