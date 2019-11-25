@@ -25,7 +25,7 @@ int main() {
     struct sockaddr_nl cli_addr; //a.k.a my name
     memset(&cli_addr, 0, sizeof(cli_addr));
     cli_addr.nl_family = AF_NETLINK;
-    cli_addr.nl_pid = getpid(); //Our pid is the same as source port number
+    cli_addr.nl_pid = getpid(); //We could define any number but default consider pid as our source port number
     cli_addr.nl_groups = 0;
 
     //Step 2: Bind this socket
@@ -43,7 +43,7 @@ int main() {
     server_addr.nl_groups = 0;
 
     //Step 4: Init message buffer
-    char buf[8192];
+    char buf[1024];
     struct iovec iov;
     iov.iov_base = buf;
     iov.iov_len = sizeof(buf);
@@ -57,7 +57,7 @@ int main() {
     //Step 6: Copy our message string into payload part
     strcpy(NLMSG_DATA(nlh), cli_msg);
 
-    printf("[Before 1] Message to kernel is '%s' , message type is %d\n", (char*)NLMSG_DATA(nlh), nlh->nlmsg_type);
+    printf("[Before 1] Message to kernel is '%s' , message type is %d, length is %d\n", (char*)NLMSG_DATA(nlh), nlh->nlmsg_type, nlh->nlmsg_len);
     //Step 7: Init protocol header
     struct msghdr msg;
     memset(&msg, 0, sizeof(msg));
