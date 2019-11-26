@@ -7,7 +7,7 @@
 
 #define NETLINK_VINCENT 31  //At most 32
 #define MAX_MSGSIZE 1024
-
+#define RESPONSE_MSG_TYPE 55
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Vincent_Chu <liataian@gmail.com>");
 
@@ -30,7 +30,7 @@ static void send_msg_to_user(char *msg, int user_pid) {
 
 	//Add a new netlink message into a skb (Construct header also, so return header address)
 	nlh = nlmsg_put(skb, 0, 0, 0, MAX_MSGSIZE, 0); //Second arg is kernel pid
-        nlh->nlmsg_type = 7788;
+        nlh->nlmsg_type = RESPONSE_MSG_TYPE;
 	NETLINK_CB(skb).portid = 0;
         NETLINK_CB(skb).dst_group = 0;
        
