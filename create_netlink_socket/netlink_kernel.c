@@ -15,6 +15,7 @@ MODULE_AUTHOR("Vincent_Chu <liataian@gmail.com>");
 char *msg_from_kernel = "Hi This is the response from VINCENT module.";
 struct sock *nl_sk = NULL;
 int user_pid = -1;
+int count = 0;
 
 static void send_msg_to_user(char *msg, int user_pid) {
 	struct nlmsghdr *nlh = NULL;
@@ -22,23 +23,23 @@ static void send_msg_to_user(char *msg, int user_pid) {
 
 	//Init a new skb
 	struct sk_buff *skb;
-	skb = alloc_skb(len, GFP_KERNEL);
+	skb = alloc_skb(len, GFP_KERNEL); //Allocate memory for a new akb
 	if (!skb) {
-		printk("Failed to allocate skb...");
+		printk("Failed to allocate memory for skb...");
 		return;
 	}
 
-	//Add a new netlink message into a skb (Construct header also, so return header address)
-	nlh = nlmsg_put(skb, 0, 0, 0, MAX_MSGSIZE, 0); //Second arg is kernel pid
+	//Fulfill a new netlink message into a skb (Construct header also, so return header address)
+	nlh = nlmsg_put(skb, 0, 0, 0, MAX_MSGSIZE, 0); //Second arg is kernel pid, total return message length is MAX_MSGSIZE + NLMSG_HDRLEN(e.g 1024+16)
         nlh->nlmsg_type = RESPONSE_MSG_TYPE;
 	NETLINK_CB(skb).portid = 0;
         NETLINK_CB(skb).dst_group = 0;
-       
+
         //Copy response message into payload part of our netlink message
 	strcpy(NLMSG_DATA(nlh), msg_from_kernel);
 	printk("Send message: '%s' to user. \n", (char *)NLMSG_DATA(nlh));
 
-	//Send response message to user space
+        //Send response message to user space (Non-blocking)
         netlink_unicast(nl_sk, skb, user_pid, MSG_DONTWAIT); //function would return when there is no data if last arg is 1 (otherwise sleep)
 }
 
@@ -52,8 +53,8 @@ static void recv_user_msg(struct sk_buff *skb) {
 	if (nlh->nlmsg_len < NLMSG_HDRLEN || skb->len < nlh->nlmsg_len) {
 		return;
 	}
-
-	printk("Received messge: '%s' from user pid:%d, len=%d\n", (char*)NLMSG_DATA(nlh), user_pid, nlh->nlmsg_len); //Extract payload in message
+        count++;
+	printk("Received messge: '%s' from user pid:%d, len=%d (count=%d)\n", (char*)NLMSG_DATA(nlh), user_pid, nlh->nlmsg_len, count); //Extract payload in message
 	
 	//Response to user
 	send_msg_to_user(msg_from_kernel, user_pid);

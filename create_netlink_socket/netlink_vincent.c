@@ -49,7 +49,7 @@ int main() {
     }
 
     //Step 4: Init message buffer
-    char buf[2048];
+    char buf[1050];
     struct iovec iov; {//points to buf we define
         iov.iov_base = buf;
         iov.iov_len = sizeof(buf); //Same as buffer size
@@ -59,6 +59,8 @@ int main() {
     struct nlmsghdr *nlh = (struct nlmsghdr*)buf; //nlh always points to buf
     nlh->nlmsg_pid = getpid();
     nlh->nlmsg_len = sizeof(buf);
+    //*****The most important part. Determine what we want kernel netlink module to do.
+    //*****Different type need passing diffrent structure. E.g RTM_XXX
     nlh->nlmsg_type = VINCENT_HELLO;
 
     //Step 6: Copy our message string into payload part
@@ -75,17 +77,20 @@ int main() {
     }
 
     //Step 8: Send message to kernel
-    printf("Send message '%s' \n", (char*)NLMSG_DATA(nlh));
-    ssize_t snd_status = sendmsg(sk, &msg, 0);
-    if (snd_status < 0) {
-        printf("Failed to send message to kernel. Error is %s", strerror(errno));
-	close(sk);
+    for (int i=0;i<3;i++) {
+        ssize_t snd_status = sendmsg(sk, &msg, 0);
+        printf("Send message '%s' \n", (char*)NLMSG_DATA(nlh));
+        if (snd_status < 0) {
+            printf("Failed to send message to kernel. Error is %s", strerror(errno));
+	    close(sk);
+        }
     }
 
     //Step 9: Waiting for reponse messages from kernel    
     memset(nlh, 0, sizeof(nlh));
     //The return value of recvmsg() is actual return length. And nlh->nlmsg_len means actual message length.
     //So what NLMSG_OK() does is check if rcv_status == nlh->nlmsg_len
+#if 0
     ssize_t rcv_status = recvmsg(sk, &msg, 0); 
     printf("\n[After] Message from kernel is '%s' \ntype is %d, payload length is %d, header length is %d, total length is %d\n",
                                         (char*)NLMSG_DATA(nlh),
@@ -93,32 +98,45 @@ int main() {
                                         nlh->nlmsg_len,
                                         NLMSG_HDRLEN,
                                         NLMSG_LENGTH(nlh->nlmsg_len));
-
-    if (rcv_status < 0) {
-        printf("Failed to receive message from kernel. Error is %s", strerror(errno));
-	close(sk);
-	return -1;
-    }
+#endif
+//    if (rcv_status < 0) {
+//        printf("Failed to receive message from kernel. Error is %s", strerror(errno));
+//	close(sk);
+//	return -1;
+//    }
 
     //Step 10: Check message length
     char *response_type = NULL;
-    printf("rcv_status=%ld, msg_len=%d\n", rcv_status, nlh->nlmsg_len);
+    //printf("rcv_status=%ld, msg_len=%d\n", rcv_status, nlh->nlmsg_len);
     //Check response length, rcv_status should equals to length of response message
     //Unless buffer size we give is smaller than returned message length or something wrong
-    if (NLMSG_OK(nlh, rcv_status)) {
-        switch (nlh->nlmsg_type){
-            case VINCENT_HIHI:
-                response_type = "HIHI";
-                break;
-            case VINCENT_YAYA:
-                response_type = "YAYA";
-                break;
-           default:
-                response_type = "Nothing";
-        }
+    while(1) {
+        ssize_t rcv_status = recvmsg(sk, &msg, 0); //recvmsg is blocking, so it will keep waiting until next message
+        if (NLMSG_OK(nlh, rcv_status)) {
+            switch (nlh->nlmsg_type){
+                case VINCENT_HIHI:
+                    response_type = "HIHI";
+                    break;
+                case VINCENT_YAYA:
+                    response_type = "YAYA";
+                    break;
+                default:
+                    response_type = "Nothing";
+            }
+            printf("\nReceive message from kernel: '%s' \ntype is %d, payload length is %d, header length is %d, total length is %d\n",
+                                        (char*)NLMSG_DATA(nlh),
+                                        nlh->nlmsg_type, //type is not 24. 24 is protocol
+                                        nlh->nlmsg_len,
+                                        NLMSG_HDRLEN,
+                                        NLMSG_LENGTH(nlh->nlmsg_len));
+            //nlh = NLMSG_NEXT(nlh, nlh->nlmsg_len);
+        } else {
+            printf("Received message '%s' , type is '%s' (%d), length is %d\n", (char*)NLMSG_DATA(nlh), response_type, nlh->nlmsg_type, nlh->nlmsg_len); 
+        };
+        usleep(1000000);
     }
 
-    printf("Received message '%s' , type is '%s' (%d)\n", (char*)NLMSG_DATA(nlh), response_type, nlh->nlmsg_type);
+    //printf("Received message '%s' , type is '%s' (%d)\n", (char*)NLMSG_DATA(nlh), response_type, nlh->nlmsg_type);
     close(sk);
     return 0;
 }
